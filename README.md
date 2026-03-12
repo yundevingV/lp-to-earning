@@ -1,102 +1,54 @@
 # LP to Earning 🤖
 
-QQQx/USDC (나스닥) 풀의 최고 TVL 포지션을 자동으로 복사하는 Solana DeFi 자동화 봇.
+나스닥 / 엔비디아 / 테슬라 xStock CLMM 풀에서 최적 포지션을 자동으로 복사하는 Solana DeFi 자동화 봇.
 
-## 전략
-
-| 항목          | 내용                             |
-| ------------- | -------------------------------- |
-| **풀**        | QQQx/USDC (나스닥 100 추종)      |
-| **리스크**    | 저수익 고안정성                  |
-| **복사 기준** | TVL(유동성) 1위 포지션 자동 선택 |
-| **복사 금액** | $1 (고정)                        |
-| **실행 주기** | 1시간마다 자동 실행 (cron)       |
-
-## 주요 파일
+## 동작 방식
 
 ```
-├── auto-copy.sh          # 자동 복사 스크립트 (핵심)
-├── script.md             # 수동 실행 커맨드 모음
-└── logs/
-    └── auto-copy.log     # 실행 로그
+실행 (1시간마다)
+  │
+  ├─ 1. 지갑 확인
+  ├─ 2. 내 기존 포지션 목록 조회
+  │
+  └─ 3. 풀별 순회 (나스닥 → 엔비디아 → 테슬라)
+         ├─ 상위 포지션 조회
+         ├─ 필터: inRange=true + APR ≥ 10%
+         ├─ TVL 1위 포지션 선택
+         ├─ 이미 보유 중이면 → 스킵
+         └─ 없으면 → $1로 포지션 복사 + 로그 기록
 ```
 
----
-
-## 빠른 시작
-
-### 1. 사전 요구사항
+## 사전 요구사항
 
 ```bash
-# byreal-cli 설치
 npm install -g @byreal-io/byreal-cli
-
-# 지갑 최초 설정
 byreal-cli setup
 ```
 
-### 2. 지갑 잔액 확인
+> **지갑 조건**: USDC $3 이상 + SOL 0.01 이상 (가스비)
+
+## 빠른 실행
 
 ```bash
-byreal-cli wallet balance
-```
+# bot.js — 나스닥 + 엔비디아 + 테슬라 (크로스플랫폼)
+node bot.js
 
-> USDC $1 이상 + SOL 소량(가스비용, 최소 0.01 SOL 이상) 필요
-
-### 3. 시뮬레이션 (dry-run)
-
-```bash
-bash auto-copy.sh
-```
-
-### 4. 실제 실행
-
-```bash
+# auto-copy.sh — 나스닥 단일 풀 (Mac/Linux)
 DRY_RUN=false bash auto-copy.sh
 ```
 
----
+## 파일 구조
 
-## 자동화 (1시간마다 cron)
-
-### cron 등록
-
-```bash
-(crontab -l 2>/dev/null; echo "0 * * * * DRY_RUN=false bash /Users/dbstjd/Documents/project/lp-to-earning/auto-copy.sh >> /Users/dbstjd/Documents/project/lp-to-earning/logs/auto-copy.log 2>&1") | crontab -
+```
+├── bot.js              # 메인 봇 (Node.js, 3개 풀)
+├── auto-copy.sh        # 쉘 스크립트 (단일 풀)
+├── script.md           # 수동 커맨드 모음
+├── .docs/
+│   ├── bot-js.md       # bot.js 상세 문서
+│   └── auto-copy-sh.md # auto-copy.sh 상세 문서
+└── logs/
+    ├── bot.log
+    └── auto-copy.log
 ```
 
-### cron 관리
-
-```bash
-# 등록 확인
-crontab -l
-
-# 로그 실시간 확인
-tail -f logs/auto-copy.log
-
-# cron 비활성화 (멈추고 싶을 때)
-crontab -r
-```
-
----
-
-## 수동 커맨드 참고
-
-```bash
-# 지갑 확인
-byreal-cli wallet address
-
-# TVL 상위 포지션 목록
-byreal-cli positions top-positions --pool FSLSua26xaXSLUG31SnyifgS6wgkRh5SirbCZW9zXNoG
-
-# 포지션 복사 (시뮬)
-byreal-cli positions copy --position <nft-mint> --amount-usd 1 --dry-run
-
-# 포지션 복사 (실행)
-byreal-cli positions copy --position <nft-mint> --amount-usd 1 --confirm
-
-# 내 포지션 확인
-byreal-cli positions list
-```
-
----
+> 상세 사용법은 [`.docs/bot-js.md`](.docs/bot-js.md) 및 [`.docs/auto-copy-sh.md`](.docs/auto-copy-sh.md) 참고.
