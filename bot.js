@@ -35,7 +35,7 @@ const CONFIG = {
   minAprPercent: 20, // 최소 연환산 APR (%) — 너무 낮은 포지션 제외
 
   // ── 복사 설정 ──────────────────────────────────────────────────────────────
-  copyAmountUsd: 1, // 포지션당 복사 금액 ($)
+  copyAmountUsd: 5, // 포지션당 복사 금액 ($) - 가스비(~$0.3) 대비 수익을 위해 $50 이상 권장
   dryRun:
     process.argv.includes("--dry-run") ||
     process.env.DRY_RUN === "true" ||
@@ -50,8 +50,8 @@ const CONFIG = {
   autoCloseOutOfRange: true, // Out-of-Range 포지션 자동 클로즈
   closeOnHighRisk: true, // 범위 이탈 위험이 'high'로 뜨는 아슬아슬한 포지션도 함께 클로즈할지 여부
   rebalanceEnabled: true, // 동일 페어 더 좋은 포지션 발견 시 자동 복사
-  rebalanceThreshold: 0.3, // 30% 이상 수익률 개선될 때만 리밸런싱
-  rebalanceMinAgeHours: 24, // 최소 유지 시간 (이 시간이 지나야만 리밸런싱 허용)
+  rebalanceThreshold: 0.5, // 50% 이상 수익률 개선될 때만 리밸런싱 (가스비 방어 최적화)
+  rebalanceMinAgeHours: 48, // 최소 유지 시간 (수수료를 회수하기 위해 최소 이틀은 유지)
 
   logDir: path.join(__dirname, "logs"),
   dbFile: path.join(__dirname, "logs", "positions_db.json"),
