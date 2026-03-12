@@ -42,11 +42,44 @@ const CONFIG = {
     false,
 
   // ── 스케줄 ─────────────────────────────────────────────────────────────────
+  runOnStart: false, // 봇을 켜자마자 즉시 1회 복사를 수행할지 여부 (false면 1시간 뒤부터 수행)
   intervalMs: 60 * 60 * 1000, // 복사 주기: 1시간
   monitorIntervalMs: 10 * 60 * 1000, // 모니터링 주기: 10분
 
+  // ── 자동 교체 ──────────────────────────────────────────────────────────────
+  autoCloseOutOfRange: true, // Out-of-Range 포지션 자동 클로즈
+  closeOnHighRisk: true, // 범위 이탈 위험이 'high'로 뜨는 아슬아슬한 포지션도 함께 클로즈할지 여부
+  rebalanceEnabled: true, // 동일 페어 더 좋은 포지션 발견 시 자동 복사
+  rebalanceThreshold: 0.3, // 30% 이상 수익률 개선될 때만 리밸런싱
+  rebalanceMinAgeHours: 24, // 최소 유지 시간 (이 시간이 지나야만 리밸런싱 허용)
+
   logDir: path.join(__dirname, "logs"),
+  dbFile: path.join(__dirname, "logs", "positions_db.json"),
 };
+// ──────────────────────────────────────────────────────────────────────────────
+
+// ── 로컬 상태 저장소 (포지션 생성 시간 기록용) ──────────────────────────────
+function loadDb() {
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG.dbFile, "utf8"));
+  } catch (e) {
+    return {};
+  }
+}
+function saveDb(data) {
+  try {
+    fs.mkdirSync(CONFIG.logDir, { recursive: true });
+    fs.writeFileSync(CONFIG.dbFile, JSON.stringify(data, null, 2));
+  } catch (e) {
+    logger.error("DB 저장 실패: " + e.message);
+  }
+}
+function registerNewPosition(nftMint) {
+  if (!nftMint) return;
+  const db = loadDb();
+  db[nftMint] = Date.now();
+  saveDb(db);
+}
 // ──────────────────────────────────────────────────────────────────────────────
 
 // ── 로거 ──────────────────────────────────────────────────────────────────────
@@ -85,6 +118,47 @@ function runCliText(args) {
     stdio: ["pipe", "pipe", "pipe"],
   });
 }
+
+// 전체 내 포지션 조회 (페이징 처리)
+function getMyPositions() {
+  const allPos = [];
+  let page = 1;
+  const pageSize = 50;
+  while (true) {
+    try {
+      const data = runCliJson(
+        `positions list --page ${page} --page-size ${pageSize}`,
+      );
+      const pos = data?.data?.positions ?? [];
+      if (pos.length === 0) break;
+      allPos.push(...pos);
+      if (pos.length < pageSize) break;
+      page++;
+    } catch (e) {
+      break;
+    }
+  }
+  return allPos;
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+// ── positionAgeMs → 생성일 + 경과시간 포맷 ────────────────────────────────────────────
+// ex) 25d 6h ago (2026-02-15)
+function formatAge(ageMs) {
+  if (!ageMs) return "-";
+  const createdAt = new Date(Date.now() - ageMs);
+  const d = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+  const h = Math.floor((ageMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const dateStr = createdAt
+    .toLocaleDateString("ko-KR", {
+      timeZone: "Asia/Seoul",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    .replace(/\. /g, "-")
+    .replace(".", "");
+  return `${d}d ${h}h ago (${dateStr})`;
+}
 // ──────────────────────────────────────────────────────────────────────────────
 
 // ── 포지션 연환산 APR 계산 ─────────────────────────────────────────────────────
@@ -114,8 +188,26 @@ function calcScore(pos) {
     Math.pow(feeRate, 0.25);
 
   // PnL 패널티: 손실 중이면 (1 + pnlPct)를 곱해 감점
-  const penalty = pnlPct < 0 ? Math.max(1 + pnlPct, 0.1) : 1;
-  return raw * penalty;
+  const pnlPenalty = pnlPct < 0 ? Math.max(1 + pnlPct, 0.1) : 1;
+
+  // Range Safety 패널티 (가장자리에 너무 가까우면 감점)
+  let safetyPenalty = 1;
+  if (pos._currentPrice && pos.priceLower && pos.priceUpper) {
+    const price = pos._currentPrice;
+    const lower = parseFloat(pos.priceLower);
+    const upper = parseFloat(pos.priceUpper);
+    const span = upper - lower;
+    if (span > 0) {
+      // 현재 가격이 하단/상단 중 어디에 더 가까운지 (절대값 거리)
+      const distToEdge = Math.min(price - lower, upper - price);
+      const safetyPct = distToEdge / span; // 최대 0.5 (정중앙)
+
+      // 범위의 10% 이내(가장자리)로 접근했다면 점수를 깎음 (최대 10분의 1 토막)
+      safetyPenalty = Math.min(Math.max(safetyPct / 0.1, 0.1), 1);
+    }
+  }
+
+  return raw * pnlPenalty * safetyPenalty;
 }
 
 // ── 소트 키 함수 ───────────────────────────────────────────────────────────────
@@ -156,6 +248,17 @@ async function run() {
   for (const pool of CONFIG.pools) {
     logger.info(`[${pool.name}] 포지션 조회 중...`);
     try {
+      // 풀의 현재 가격을 먼저 구함 (Range 패널티 계산용)
+      let currentPrice = 0;
+      try {
+        const poolInfo = runCliJson(`pools info ${pool.address}`);
+        currentPrice = parseFloat(
+          poolInfo?.data?.pool?.current_price ||
+            poolInfo?.data?.current_price ||
+            0,
+        );
+      } catch (e) {}
+
       const data = runCliJson(`positions top-positions --pool ${pool.address}`);
       const positions = data?.data?.positions ?? [];
 
@@ -171,6 +274,7 @@ async function run() {
       // 풀 정보 태깅
       filtered.forEach((p) => {
         p._poolName = pool.name;
+        p._currentPrice = currentPrice;
         p._apr = calcApr(p);
       });
 
@@ -200,8 +304,9 @@ async function run() {
     const fee = parseFloat(p.earnedUsd).toFixed(2);
     const apr = p._apr.toFixed(1);
     const score = calcScore(p).toFixed(3);
+    const age = formatAge(p.positionAgeMs);
     logger.info(
-      `  ${String(i + 1).padStart(2)}위 [${p._poolName}] Score=${score} | TVL=$${tvl} | Fee=$${fee} | APR≈${apr}% | ${p.inRange ? "✅ In" : "⚠️ Out"}`,
+      `  ${String(i + 1).padStart(2)}위 [${p._poolName}] Score=${score} | TVL=$${tvl} | Fee=$${fee} | APR≈${apr}% | ${p.inRange ? "✅ In" : "⚠️ Out"} | 생성: ${age}`,
     );
   });
   logger.info("");
@@ -225,6 +330,7 @@ async function run() {
       const nft =
         result.match(/NFT Address\s+([1-9A-HJ-NP-Za-km-z]{32,44})/)?.[1] ?? "";
       logger.ok(`[${pos._poolName}] 복사 성공! NFT: ${nft}`);
+      if (nft && !CONFIG.dryRun) registerNewPosition(nft);
       successCount++;
     } catch (e) {
       const reason = e.message.includes("insufficient")
@@ -243,20 +349,193 @@ async function run() {
   }
 
   // 6. 내 포지션 요약
+  let myList = [];
   try {
-    const myData = runCliJson("positions list");
-    const myList = myData?.data?.positions ?? [];
+    myList = getMyPositions();
+
     logger.info(`\n내 전체 포지션: ${myList.length}개`);
     myList.forEach((p) => {
       const liq = parseFloat(p.liquidityUsd || 0).toFixed(2);
       const earned = parseFloat(p.earnedUsd || 0).toFixed(4);
+      // inRange 필드가 API 배열 형태에서 안 올 수 있으므로 기본 문자열로 처리
+      // (이후 cleanOutOfRange 단계에서 analyze를 통해 정확히 체크함)
+      const status = p.inRange === false ? "⚠️ Out" : "✅ In(예상)";
+      const age = formatAge(p.positionAgeMs); // (positionAgeMs 도 API에서 안 올 수 있음. 하단 리밸런싱에서 db 읽음)
       logger.info(
-        `  • ${p.pair ?? p.poolAddress.slice(0, 8)} | NFT: ${p.nftMintAddress ?? p.positionAddress} | Liq=$${liq} | Earned=$${earned}`,
+        `  • ${p.pair ?? p.poolAddress} | ${status} | Liq=$${liq} | Earned=$${earned} | ${p.nftMintAddress} | ${p.positionAddress}`,
       );
     });
   } catch (_) {}
 
+  // 7. Out-of-Range 클로즈 & 리밸런싱
+  if (CONFIG.autoCloseOutOfRange) {
+    cleanOutOfRange(myList);
+  }
+  if (CONFIG.rebalanceEnabled) {
+    rebalance(myList, allCandidates);
+  }
+
   logger.info("========== 봇 실행 완료 ==========\n");
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+// ── Out-of-Range 자동 클로즈 ─────────────────────────────────────────────────
+async function cleanOutOfRange(myList) {
+  // byreal-cli 'positions list' 출력 시 inRange가 없을 수 있음
+  // status를 조회해야 정확한 inRange 여부를 알 수 있으므로 상태 체크.
+  let outOfRange = [];
+  const db = loadDb();
+
+  for (const p of myList) {
+    const nftMint = p.nftMintAddress ?? p.positionAddress;
+    const createdAt = db[nftMint];
+    const ageHours = createdAt
+      ? (Date.now() - createdAt) / (60 * 60 * 1000)
+      : 999;
+
+    // 24시간(CONFIG.rebalanceMinAgeHours)이 안 지났으면 Out-of-Range라도 유지
+    if (ageHours < CONFIG.rebalanceMinAgeHours) {
+      continue;
+    }
+
+    if (p.inRange === false) {
+      outOfRange.push(p);
+    } else if (p.inRange === undefined) {
+      // 확실하지 않으면 개별 상태 확인
+      try {
+        // positions analyze 명령으로 상세 상태 조회
+        const info = runCliJson(`positions analyze ${nftMint}`);
+
+        const isOut = info?.data?.position?.inRange === false;
+        const isHighRisk = info?.data?.rangeHealth?.outOfRangeRisk === "high";
+
+        if (isOut || (CONFIG.closeOnHighRisk && isHighRisk)) {
+          // 범위를 아예 나갔거나, 설정에 의해 '고위험(high)' 상태인 것도 닫음
+          outOfRange.push(p);
+          p.inRange = false;
+        } else if (info?.data?.position?.inRange === true) {
+          p.inRange = true;
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (outOfRange.length === 0) {
+    logger.info("♻️  Out-of-Range 포지션 없음");
+    return;
+  }
+
+  logger.info(`♻️  Out-of-Range 포지션 ${outOfRange.length}개 클로즈 시작...`);
+  const flag = CONFIG.dryRun ? "--dry-run" : "--confirm";
+
+  for (const pos of outOfRange) {
+    const nftMint = pos.nftMintAddress ?? pos.positionAddress;
+    logger.info(`  ❌ 클로즈: [${pos.pair}] NFT: ${nftMint}`);
+    try {
+      const result = runCliText(
+        `positions close --nft-mint ${nftMint} ${flag}`,
+      );
+      const sig =
+        result.match(/Signature\s+([1-9A-HJ-NP-Za-km-z]{32,88})/)?.[1] ?? "";
+      logger.ok(`  클로즈 성공! Sig: ${sig}`);
+    } catch (e) {
+      logger.error(`  클로즈 실패: ${e.message.split("\n")[0]}`);
+    }
+  }
+}
+
+// ── 리밸런싱 (더 좋은 포지션 복사) ───────────────────────────────────────────
+function rebalance(myList, allCandidates) {
+  logger.info("🔄  리밸런싱 체크 중...");
+
+  const db = loadDb();
+  const myByPair = {};
+  myList
+    .filter((p) => p.inRange !== false)
+    .forEach((p) => {
+      const pair = p.pair || p.poolAddress;
+      if (!myByPair[pair]) myByPair[pair] = [];
+      p._yieldRate =
+        parseFloat(p.earnedUsd || 0) /
+        Math.max(parseFloat(p.liquidityUsd || 1), 1);
+
+      // 내 포지션 생성 경과 시간 확인
+      const mint = p.nftMintAddress ?? p.positionAddress;
+      const createdAt = db[mint];
+      p._ageHours = createdAt
+        ? (Date.now() - createdAt) / (60 * 60 * 1000)
+        : 999; // DB에 없으면 그냥 오래된 것으로 간주
+
+      myByPair[pair].push(p);
+    });
+
+  const candidatesByPair = {};
+  allCandidates.forEach((p) => {
+    const pair = p.pair || p.poolAddress;
+    if (!candidatesByPair[pair]) candidatesByPair[pair] = [];
+    candidatesByPair[pair].push(p);
+  });
+
+  const flag = CONFIG.dryRun ? "--dry-run" : "--confirm";
+  let triggered = 0;
+
+  for (const [pair, candidates] of Object.entries(candidatesByPair)) {
+    if (!myByPair[pair] || myByPair[pair].length === 0) continue;
+
+    const best = candidates[0]; // 이미 score 정렬됨
+    const bestScore = calcScore(best);
+
+    // 가장 수익률 높은 애를 기준으로 비교
+    const myBest = myByPair[pair].sort(
+      (a, b) => b._yieldRate - a._yieldRate,
+    )[0];
+
+    // 에이징 제한 체크 (최소 유지 시간 미달 시 스킵)
+    if (myBest._ageHours < CONFIG.rebalanceMinAgeHours) {
+      logger.info(
+        `  [유지] [${pair}] 최소 유지 시간(${CONFIG.rebalanceMinAgeHours}h) 미달 (현재 ${myBest._ageHours.toFixed(1)}h 경과)`,
+      );
+      continue;
+    }
+
+    const bestCandidateYield = parseFloat(best.earnedUsdPercent || 0) / 100;
+    const threshold = CONFIG.rebalanceThreshold;
+
+    if (bestScore <= 0 || bestCandidateYield <= 0) continue;
+
+    const myYield = myBest._yieldRate;
+    const improvement =
+      myYield > 0 ? (bestCandidateYield - myYield) / myYield : 1;
+
+    if (improvement < threshold) {
+      logger.info(
+        `  [유지] [${pair}] 현재 포지션 양호 (${(improvement * 100).toFixed(1)}% 개선 가능 → 기준 미달)`,
+      );
+      continue;
+    }
+
+    logger.info(
+      `  ↑ [리밸런스] [${pair}] 더 좋은 포지션 발견! Score=${bestScore.toFixed(2)} | ${(improvement * 100).toFixed(1)}% 이상 개선`,
+    );
+    logger.info(`    대상: ${best.positionAddress}`);
+
+    try {
+      const result = runCliText(
+        `positions copy --position ${best.positionAddress} --amount-usd ${CONFIG.copyAmountUsd} ${flag}`,
+      );
+      const nft =
+        result.match(/NFT Address\s+([1-9A-HJ-NP-Za-km-z]{32,44})/)?.[1] ?? "";
+      logger.ok(`  [리밸런스] [${pair}] 복사 성공! NFT: ${nft}`);
+      if (nft && !CONFIG.dryRun) registerNewPosition(nft);
+      triggered++;
+    } catch (e) {
+      logger.error(`  [리밸런스] [${pair}] 실패: ${e.message.split("\n")[0]}`);
+    }
+  }
+
+  if (triggered === 0) {
+    logger.info("  🔄  리밸런싱 대상 없음 (전체 포지션 유지 단계)");
+  }
 }
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -285,8 +564,7 @@ async function monitor() {
 
   // 2. 내 포지션 현황 조회
   try {
-    const myData = runCliJson("positions list");
-    const myList = myData?.data?.positions ?? [];
+    const myList = getMyPositions();
     const totalLiq = myList.reduce(
       (s, p) => s + parseFloat(p.liquidityUsd || 0),
       0,
@@ -303,8 +581,9 @@ async function monitor() {
       const liq = parseFloat(p.liquidityUsd || 0).toFixed(2);
       const earned = parseFloat(p.earnedUsd || 0).toFixed(4);
       const status = p.inRange === false ? "⚠️ Out" : "✅ In";
+      const age = formatAge(p.positionAgeMs);
       logger.info(
-        `│   • ${(p.pair || "").padEnd(10)} ${status} | Liq=$${liq} | Earned=$${earned} | ${p.nftMintAddress ?? p.positionAddress}`,
+        `│   • ${(p.pair || "").padEnd(10)} ${status} | Liq=$${liq} | Earned=$${earned} | 생성: ${age} | ${p.nftMintAddress ?? p.positionAddress}`,
       );
     });
   } catch (e) {
@@ -323,10 +602,16 @@ logger.info(
 );
 logger.info(`모니터링: 풀 현황 + 내 포지션 (10분마다)\n`);
 
-// 즉시 1회 실행
-monitor();
-run();
-
 // 주기 스케줄
 setInterval(monitor, CONFIG.monitorIntervalMs); // 10분마다 모니터링
 setInterval(run, CONFIG.intervalMs); // 1시간마다 복사
+
+// 즉시 1회 메뉴
+monitor();
+if (CONFIG.runOnStart) {
+  run();
+} else {
+  logger.info(
+    `\n⏳ 최초 복사(run)는 스킵되었습니다. 첫 번째 복사 및 리밸런싱은 1시간 뒤에 시작됩니다.`,
+  );
+}

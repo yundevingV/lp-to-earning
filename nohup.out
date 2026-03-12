@@ -1,0 +1,102 @@
+[2026-03-12T03:48:04.958Z] [INFO ] LP Copy Bot v2 시작
+[2026-03-12T03:48:04.960Z] [INFO ] 대상 풀: QQQx/USDC · 나스닥 / NVDAx/USDC · 엔비디아 / TSLAx/USDC · 테슬라
+[2026-03-12T03:48:04.960Z] [INFO ] 전략: score 기준 전체 정렬 → 상위 3개 복사 (1시간마다)
+[2026-03-12T03:48:04.960Z] [INFO ] 모니터링: 풀 현황 + 내 포지션 (10분마다)
+
+[2026-03-12T03:48:04.971Z] [INFO ] ┌──── 📊 모니터링 [2026. 3. 12. 오후 12:48:04] ────
+[2026-03-12T03:48:05.349Z] [INFO ] │ [QQQx/USDC · 나스닥] 가격=$602.24 | TVL=$258662 | APR=30.3% | 24h 거래량=$108173 | 24h Fee=$0.30
+[2026-03-12T03:48:05.723Z] [INFO ] │ [NVDAx/USDC · 엔비디아] 가격=$183.60 | TVL=$347915 | APR=241.4% | 24h 거래량=$1155190 | 24h Fee=$2.41
+[2026-03-12T03:48:06.059Z] [INFO ] │ [TSLAx/USDC · 테슬라] 가격=$404.64 | TVL=$478916 | APR=217.0% | 24h 거래량=$1425525 | 24h Fee=$2.17
+[2026-03-12T03:48:06.590Z] [INFO ] │
+[2026-03-12T03:48:06.590Z] [INFO ] │ 💼 내 포지션 총 20개 | 총 유동성=$19.96 | 총 수수료=$0.0037
+[2026-03-12T03:48:06.590Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0004 | 생성: - | FvtexuM9aeoLsvhgwuMoEYJo3cBy5bGEvXEXByuywRMV
+[2026-03-12T03:48:06.591Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0003 | 생성: - | GJHXZoG14firSjQt96roUBgg3Pa2FZ5NqNgdJoYsR6p2
+[2026-03-12T03:48:06.591Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0001 | 생성: - | 2kBrxvi7ze8rEbAMH9N3jEjDR7N4cTq5oYtDyB11Ci93
+[2026-03-12T03:48:06.591Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0000 | 생성: - | 3VerG58fubuRfbRWdkM6Gtak5154J17r5RXVGDFfoF2v
+[2026-03-12T03:48:06.591Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0002 | 생성: - | 7LZrn4e3W1PThf6wyASDGdkKtKnKZBJmgnn82rBBZ6sv
+[2026-03-12T03:48:06.591Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0002 | 생성: - | HXYax8aeZoUfyYyFQRXw6FUuQaPPm7io8g2cXYn8cw1s
+[2026-03-12T03:48:06.591Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0002 | 생성: - | DDXRco7aj2dizPXTvTZmYtuhqdcdcb1B7kBgnfD1jhSA
+[2026-03-12T03:48:06.591Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0000 | 생성: - | ECvHgofENY81Gz4HmvwWNvtdi9KjgzyeBVzQSPq61wWb
+[2026-03-12T03:48:06.591Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0000 | 생성: - | 4HesVtJdEVYcq1TQuQnEKGAAE6FFM1YgV4TP1qAPSiUj
+[2026-03-12T03:48:06.591Z] [INFO ] │   • TSLAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0000 | 생성: - | 8ZFjEHQgH7wpNwg2wUBABNfBpqG4qi3Mn3BcBmXmgBMg
+[2026-03-12T03:48:06.591Z] [INFO ] │   • QQQx/USDC  ✅ In | Liq=$1.00 | Earned=$0.0001 | 생성: - | B6TS98Q18kBXFjC3ntKLpEp8LjPfT6mCarkK8bdsY7Nx
+[2026-03-12T03:48:06.591Z] [INFO ] │   • QQQx/USDC  ✅ In | Liq=$1.00 | Earned=$0.0001 | 생성: - | DmuBDidp5H4oGRNJZQ3eUfoDYodCyDug2jwLL4bLB2NE
+[2026-03-12T03:48:06.591Z] [INFO ] │   • QQQx/USDC  ✅ In | Liq=$1.00 | Earned=$0.0001 | 생성: - | B3AGkcegpTrZ1rhPqqp3gAKPrw9NmTj13h6k5mGbYJAi
+[2026-03-12T03:48:06.591Z] [INFO ] │   • NVDAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0000 | 생성: - | 2z5xrLWUvYg3WYv8PiUJsqS1vcffN6FVB1vrS39vQvkH
+[2026-03-12T03:48:06.591Z] [INFO ] │   • NVDAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0000 | 생성: - | CDQuPK3bDXXRrffUpPh6V4mb8yTe3dztuvGkmWHRFDSU
+[2026-03-12T03:48:06.591Z] [INFO ] │   • NVDAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0000 | 생성: - | ACVQNh1suTjWK5HDx9tLxMk8Lt6bvTjsZDWus1u3u3fn
+[2026-03-12T03:48:06.591Z] [INFO ] │   • NVDAx/USDC ✅ In | Liq=$1.00 | Earned=$0.0000 | 생성: - | 4uBwxPudAvoJTrhBaRZeriKEf2V91N4BXk43CcHtSCAA
+[2026-03-12T03:48:06.591Z] [INFO ] │   • QQQx/USDC  ✅ In | Liq=$1.00 | Earned=$0.0007 | 생성: - | 7sS9qeAEktEKfzt69FSzVZCbL6g1aP55b6VEgBF3fVn7
+[2026-03-12T03:48:06.591Z] [INFO ] │   • QQQx/USDC  ✅ In | Liq=$1.00 | Earned=$0.0007 | 생성: - | HCADfw7hyWDeY5S7TSP6XTPTsKmbMPQ791vXS2T55hKV
+[2026-03-12T03:48:06.592Z] [INFO ] │   • QQQx/USDC  ✅ In | Liq=$1.00 | Earned=$0.0007 | 생성: - | 6vsZzD9FZ1U2D32SJk7w69pqAB3Xu68ErMQBQTwYHfqS
+[2026-03-12T03:48:06.592Z] [INFO ] └──────────────────────────────────────────────────
+[2026-03-12T03:48:06.592Z] [INFO ] ========== 봇 실행 시작 [2026. 3. 12. 오후 12:48:06] ==========
+[2026-03-12T03:48:06.592Z] [INFO ] 설정 | topN=3 | sortBy=score | minAPR=20% | amount=$1 | dryRun=true
+[2026-03-12T03:48:06.759Z] [INFO ] 지갑: 8qKXngJiHP7BrF3oxkXiv58z6tt2ELJx7ZxShQkxwBv5
+[2026-03-12T03:48:06.759Z] [INFO ] [QQQx/USDC · 나스닥] 포지션 조회 중...
+[2026-03-12T03:48:07.693Z] [INFO ] [QQQx/USDC · 나스닥] 조건 충족 포지션: 10개 (전체 20개 중)
+[2026-03-12T03:48:07.693Z] [INFO ] [NVDAx/USDC · 엔비디아] 포지션 조회 중...
+[2026-03-12T03:48:08.626Z] [INFO ] [NVDAx/USDC · 엔비디아] 조건 충족 포지션: 16개 (전체 20개 중)
+[2026-03-12T03:48:08.627Z] [INFO ] [TSLAx/USDC · 테슬라] 포지션 조회 중...
+[2026-03-12T03:48:09.822Z] [INFO ] [TSLAx/USDC · 테슬라] 조건 충족 포지션: 16개 (전체 20개 중)
+[2026-03-12T03:48:09.822Z] [INFO ] 
+── 전체 순위 (score 기준, 목표 3개 성공까지 순서대로 시도) ──
+[2026-03-12T03:48:09.823Z] [INFO ]    1위 [TSLAx/USDC · 테슬라] Score=19.251 | TVL=$32651 | Fee=$1854.70 | APR≈93.1% | ✅ In | 생성: 22d 6h ago (02-18)
+[2026-03-12T03:48:09.823Z] [INFO ]    2위 [TSLAx/USDC · 테슬라] Score=19.018 | TVL=$7010 | Fee=$143.85 | APR≈223.5% | ✅ In | 생성: 3d 8h ago (03-09)
+[2026-03-12T03:48:09.823Z] [INFO ]    3위 [NVDAx/USDC · 엔비디아] Score=18.738 | TVL=$9200 | Fee=$1720.15 | APR≈42.7% | ✅ In | 생성: 159d 19h ago (10-03)
+[2026-03-12T03:48:09.823Z] [INFO ]    4위 [NVDAx/USDC · 엔비디아] Score=16.950 | TVL=$4926 | Fee=$765.72 | APR≈39.7% | ✅ In | 생성: 143d 0h ago (10-20)
+[2026-03-12T03:48:09.823Z] [INFO ]    5위 [NVDAx/USDC · 엔비디아] Score=16.543 | TVL=$6495 | Fee=$664.38 | APR≈48.1% | ✅ In | 생성: 77d 14h ago (12-24)
+[2026-03-12T03:48:09.823Z] [INFO ]    6위 [NVDAx/USDC · 엔비디아] Score=16.338 | TVL=$5011 | Fee=$30.89 | APR≈357.2% | ✅ In | 생성: 0d 15h ago (03-11)
+[2026-03-12T03:48:09.823Z] [INFO ]    7위 [TSLAx/USDC · 테슬라] Score=15.155 | TVL=$17643 | Fee=$994.02 | APR≈50.7% | ✅ In | 생성: 40d 13h ago (01-30)
+[2026-03-12T03:48:09.823Z] [INFO ]    8위 [TSLAx/USDC · 테슬라] Score=14.555 | TVL=$4949 | Fee=$186.96 | APR≈70.5% | ✅ In | 생성: 19d 13h ago (02-20)
+[2026-03-12T03:48:09.824Z] [INFO ]    9위 [TSLAx/USDC · 테슬라] Score=14.417 | TVL=$6207 | Fee=$394.82 | APR≈45.9% | ✅ In | 생성: 50d 15h ago (01-20)
+[2026-03-12T03:48:09.824Z] [INFO ]   10위 [TSLAx/USDC · 테슬라] Score=14.346 | TVL=$7062 | Fee=$351.69 | APR≈53.0% | ✅ In | 생성: 34d 7h ago (02-06)
+[2026-03-12T03:48:09.824Z] [INFO ]   11위 [NVDAx/USDC · 엔비디아] Score=14.068 | TVL=$4961 | Fee=$141.17 | APR≈78.2% | ✅ In | 생성: 13d 6h ago (02-27)
+[2026-03-12T03:48:09.824Z] [INFO ]   12위 [NVDAx/USDC · 엔비디아] Score=13.341 | TVL=$10017 | Fee=$577.08 | APR≈37.1% | ✅ In | 생성: 56d 15h ago (01-14)
+[2026-03-12T03:48:09.824Z] [INFO ]   13위 [NVDAx/USDC · 엔비디아] Score=13.278 | TVL=$3309 | Fee=$53.16 | APR≈105.5% | ✅ In | 생성: 5d 13h ago (03-06)
+[2026-03-12T03:48:09.824Z] [INFO ]   14위 [TSLAx/USDC · 테슬라] Score=13.258 | TVL=$20756 | Fee=$1681.26 | APR≈26.2% | ✅ In | 생성: 112d 20h ago (11-19)
+[2026-03-12T03:48:09.825Z] [INFO ]   15위 [NVDAx/USDC · 엔비디아] Score=13.013 | TVL=$20808 | Fee=$829.60 | APR≈41.2% | ✅ In | 생성: 35d 7h ago (02-05)
+[2026-03-12T03:48:09.825Z] [INFO ]   16위 [TSLAx/USDC · 테슬라] Score=13.010 | TVL=$8371 | Fee=$646.64 | APR≈29.0% | ✅ In | 생성: 97d 3h ago (12-05)
+[2026-03-12T03:48:09.825Z] [INFO ]   17위 [NVDAx/USDC · 엔비디아] Score=12.838 | TVL=$9828 | Fee=$357.14 | APR≈46.3% | ✅ In | 생성: 28d 15h ago (02-11)
+[2026-03-12T03:48:09.825Z] [INFO ]   18위 [TSLAx/USDC · 테슬라] Score=12.793 | TVL=$12237 | Fee=$481.38 | APR≈42.2% | ✅ In | 생성: 34d 0h ago (02-06)
+[2026-03-12T03:48:09.825Z] [INFO ]   19위 [TSLAx/USDC · 테슬라] Score=12.631 | TVL=$22005 | Fee=$906.82 | APR≈37.2% | ✅ In | 생성: 40d 10h ago (01-31)
+[2026-03-12T03:48:09.825Z] [INFO ]   20위 [TSLAx/USDC · 테슬라] Score=12.532 | TVL=$9955 | Fee=$550.60 | APR≈32.0% | ✅ In | 생성: 63d 2h ago (01-08)
+[2026-03-12T03:48:09.825Z] [INFO ] 
+[2026-03-12T03:48:09.825Z] [INFO ] [시도 1] [TSLAx/USDC · 테슬라] 복사 → D8aYLUNDwfFtR3ASf8VHRFMCNdgy2peyCX6ZoyBuYj3L (성공 0/3)
+[2026-03-12T03:48:10.880Z] [OK   ] [TSLAx/USDC · 테슬라] 복사 성공! NFT: 
+[2026-03-12T03:48:10.881Z] [INFO ] [시도 2] [TSLAx/USDC · 테슬라] 복사 → 9rEv1GLPjpZperQZ8iJYkj4WuvXJRaKshLWH4t4nMrSY (성공 1/3)
+[2026-03-12T03:48:11.977Z] [OK   ] [TSLAx/USDC · 테슬라] 복사 성공! NFT: 
+[2026-03-12T03:48:11.977Z] [INFO ] [시도 3] [NVDAx/USDC · 엔비디아] 복사 → 2RrkPKhnX3ApVcrAAFHYfdZQq7NGJackouJvUdPYsY8E (성공 2/3)
+[2026-03-12T03:48:13.103Z] [OK   ] [NVDAx/USDC · 엔비디아] 복사 성공! NFT: 
+[2026-03-12T03:48:13.103Z] [OK   ] 목표 달성! 3개 복사 완료 (3번 시도)
+[2026-03-12T03:48:13.510Z] [INFO ] 
+내 전체 포지션: 20개
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: FvtexuM9aeoLsvhgwuMoEYJo3cBy5bGEvXEXByuywRMV | Liq=$1.00 | Earned=$0.0004
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: GJHXZoG14firSjQt96roUBgg3Pa2FZ5NqNgdJoYsR6p2 | Liq=$1.00 | Earned=$0.0003
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: 2kBrxvi7ze8rEbAMH9N3jEjDR7N4cTq5oYtDyB11Ci93 | Liq=$1.00 | Earned=$0.0001
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: 3VerG58fubuRfbRWdkM6Gtak5154J17r5RXVGDFfoF2v | Liq=$1.00 | Earned=$0.0000
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: 7LZrn4e3W1PThf6wyASDGdkKtKnKZBJmgnn82rBBZ6sv | Liq=$1.00 | Earned=$0.0002
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: HXYax8aeZoUfyYyFQRXw6FUuQaPPm7io8g2cXYn8cw1s | Liq=$1.00 | Earned=$0.0002
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: DDXRco7aj2dizPXTvTZmYtuhqdcdcb1B7kBgnfD1jhSA | Liq=$1.00 | Earned=$0.0002
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: ECvHgofENY81Gz4HmvwWNvtdi9KjgzyeBVzQSPq61wWb | Liq=$1.00 | Earned=$0.0000
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: 4HesVtJdEVYcq1TQuQnEKGAAE6FFM1YgV4TP1qAPSiUj | Liq=$1.00 | Earned=$0.0000
+[2026-03-12T03:48:13.511Z] [INFO ]   • TSLAx/USDC | NFT: 8ZFjEHQgH7wpNwg2wUBABNfBpqG4qi3Mn3BcBmXmgBMg | Liq=$1.00 | Earned=$0.0000
+[2026-03-12T03:48:13.511Z] [INFO ]   • QQQx/USDC | NFT: B6TS98Q18kBXFjC3ntKLpEp8LjPfT6mCarkK8bdsY7Nx | Liq=$1.00 | Earned=$0.0001
+[2026-03-12T03:48:13.511Z] [INFO ]   • QQQx/USDC | NFT: DmuBDidp5H4oGRNJZQ3eUfoDYodCyDug2jwLL4bLB2NE | Liq=$1.00 | Earned=$0.0001
+[2026-03-12T03:48:13.511Z] [INFO ]   • QQQx/USDC | NFT: B3AGkcegpTrZ1rhPqqp3gAKPrw9NmTj13h6k5mGbYJAi | Liq=$1.00 | Earned=$0.0001
+[2026-03-12T03:48:13.511Z] [INFO ]   • NVDAx/USDC | NFT: 2z5xrLWUvYg3WYv8PiUJsqS1vcffN6FVB1vrS39vQvkH | Liq=$1.00 | Earned=$0.0000
+[2026-03-12T03:48:13.511Z] [INFO ]   • NVDAx/USDC | NFT: CDQuPK3bDXXRrffUpPh6V4mb8yTe3dztuvGkmWHRFDSU | Liq=$1.00 | Earned=$0.0000
+[2026-03-12T03:48:13.511Z] [INFO ]   • NVDAx/USDC | NFT: ACVQNh1suTjWK5HDx9tLxMk8Lt6bvTjsZDWus1u3u3fn | Liq=$1.00 | Earned=$0.0000
+[2026-03-12T03:48:13.511Z] [INFO ]   • NVDAx/USDC | NFT: 4uBwxPudAvoJTrhBaRZeriKEf2V91N4BXk43CcHtSCAA | Liq=$1.00 | Earned=$0.0000
+[2026-03-12T03:48:13.511Z] [INFO ]   • QQQx/USDC | NFT: 7sS9qeAEktEKfzt69FSzVZCbL6g1aP55b6VEgBF3fVn7 | Liq=$1.00 | Earned=$0.0007
+[2026-03-12T03:48:13.511Z] [INFO ]   • QQQx/USDC | NFT: HCADfw7hyWDeY5S7TSP6XTPTsKmbMPQ791vXS2T55hKV | Liq=$1.00 | Earned=$0.0007
+[2026-03-12T03:48:13.511Z] [INFO ]   • QQQx/USDC | NFT: 6vsZzD9FZ1U2D32SJk7w69pqAB3Xu68ErMQBQTwYHfqS | Liq=$1.00 | Earned=$0.0007
+[2026-03-12T03:48:13.511Z] [INFO ] ♻️  Out-of-Range 포지션 없음
+[2026-03-12T03:48:13.512Z] [INFO ] 🔄  리밸런싱 체크 중...
+[2026-03-12T03:48:13.513Z] [INFO ]   ↑ [리밸런스] [TSLAx/USDC] 더 좋은 포지션 발견! Score=19.25 | 54.3% 이상 개선
+[2026-03-12T03:48:13.513Z] [INFO ]     대상: D8aYLUNDwfFtR3ASf8VHRFMCNdgy2peyCX6ZoyBuYj3L
+[2026-03-12T03:48:14.610Z] [OK   ]   [리밸런스] [TSLAx/USDC] 복사 성공! NFT: 
+[2026-03-12T03:48:14.611Z] [INFO ]   [유지] [NVDAx/USDC] 최소 유지 시간(24h) 미달 (현재 1.6h 경과)
+[2026-03-12T03:48:14.611Z] [INFO ]   [유지] [QQQx/USDC] 현재 포지션 양호 (7.8% 개선 가능 → 기준 미달)
+[2026-03-12T03:48:14.611Z] [INFO ] ========== 봇 실행 완료 ==========
+
