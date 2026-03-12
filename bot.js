@@ -29,14 +29,17 @@ const CONFIG = {
   ],
 
   // ── 복사 기준 ──────────────────────────────────────────────────────────────
-  topN: 3, // 전체 정렬 후 상위 N개 복사
-  sortBy: "tvl", // 'tvl' | 'fee' | 'apr'  (정렬 기준)
+  topN: 3, // 성공 복사 목표 개수
+  sortBy: "score", // 'score' | 'tvl' | 'fee' | 'apr'  (정렬 기준)
   requireInRange: true, // true = In-Range 포지션만
   minAprPercent: 20, // 최소 연환산 APR (%) — 너무 낮은 포지션 제외
 
   // ── 복사 설정 ──────────────────────────────────────────────────────────────
   copyAmountUsd: 1, // 포지션당 복사 금액 ($)
-  dryRun: true, // true = 시뮬레이션만
+  dryRun:
+    process.argv.includes("--dry-run") ||
+    process.env.DRY_RUN === "true" ||
+    false,
 
   // ── 스케줄 ─────────────────────────────────────────────────────────────────
   intervalMs: 60 * 60 * 1000, // 복사 주기: 1시간
@@ -93,8 +96,31 @@ function calcApr(pos) {
   return (earned / liq / ageYears) * 100;
 }
 
+// ── 복합 점수 계산 (저수익 고안정성 전략) ─────────────────────────────────────────
+// 기하평균: APR^0.35 × ln(TVL)^0.40 × FeeRate^0.25 × PnL패널티
+// - TVL에 ln() 적용: $1K→$50K 차이는 크게, $50K→$51K 차이는 작게
+// - 기하평균: 3개 지표 중 하나라도 나쁘면 전체 점수 급락 (균형 강제)
+// - PnL 패널티: 손실(IL) 중인 포지션은 감점
+function calcScore(pos) {
+  const apr = Math.max(calcApr(pos), 0.001);
+  const tvl = Math.max(parseFloat(pos.liquidityUsd || 0), 1);
+  const fee = parseFloat(pos.earnedUsd || 0);
+  const feeRate = Math.max((fee / tvl) * 100, 0.001); // 수수료 효율 (%)
+  const pnlPct = parseFloat(pos.pnlUsdPercent || 0);
+
+  const raw =
+    Math.pow(apr, 0.35) *
+    Math.pow(Math.log(tvl + 1), 0.4) *
+    Math.pow(feeRate, 0.25);
+
+  // PnL 패널티: 손실 중이면 (1 + pnlPct)를 곱해 감점
+  const penalty = pnlPct < 0 ? Math.max(1 + pnlPct, 0.1) : 1;
+  return raw * penalty;
+}
+
 // ── 소트 키 함수 ───────────────────────────────────────────────────────────────
 const SORT_FN = {
+  score: (a, b) => calcScore(b) - calcScore(a),
   tvl: (a, b) => parseFloat(b.liquidityUsd) - parseFloat(a.liquidityUsd),
   fee: (a, b) => parseFloat(b.earnedUsd) - parseFloat(a.earnedUsd),
   apr: (a, b) => calcApr(b) - calcApr(a),
@@ -160,45 +186,60 @@ async function run() {
     return;
   }
 
-  // 3. 전체 정렬
-  const sortFn = SORT_FN[CONFIG.sortBy] ?? SORT_FN.tvl;
+  // 3. 전체 정렬 (복합 점수 기준)
+  const sortFn = SORT_FN[CONFIG.sortBy] ?? SORT_FN.score;
   allCandidates.sort(sortFn);
 
-  // 4. 상위 N개 선택
-  const targets = allCandidates.slice(0, CONFIG.topN);
-
+  // 4. 전체 순위 상위 20개 출력 (복사 전 미리보기)
+  const preview = allCandidates.slice(0, 20);
   logger.info(
-    `\n── 전체 순위 (${CONFIG.sortBy} 기준 상위 ${targets.length}개) ──`,
+    `\n── 전체 순위 (${CONFIG.sortBy} 기준, 목표 ${CONFIG.topN}개 성공까지 순서대로 시도) ──`,
   );
-  targets.forEach((p, i) => {
+  preview.forEach((p, i) => {
     const tvl = parseFloat(p.liquidityUsd).toFixed(0);
     const fee = parseFloat(p.earnedUsd).toFixed(2);
     const apr = p._apr.toFixed(1);
+    const score = calcScore(p).toFixed(3);
     logger.info(
-      `  ${i + 1}위 [${p._poolName}] ${p.positionAddress} | TVL=$${tvl} | Fee=$${fee} | APR≈${apr}% | ${p.inRange ? "✅ In" : "⚠️ Out"}`,
+      `  ${String(i + 1).padStart(2)}위 [${p._poolName}] Score=${score} | TVL=$${tvl} | Fee=$${fee} | APR≈${apr}% | ${p.inRange ? "✅ In" : "⚠️ Out"}`,
     );
   });
   logger.info("");
 
-  // 5. 상위 N개 복사 (중복 허용 — 매 실행마다 복사)
+  // 5. 폴백 복사: 1위부터 순서대로 시도, 성공 N개 달성 시 중단
   const flag = CONFIG.dryRun ? "--dry-run" : "--confirm";
+  let successCount = 0;
+  let tryCount = 0;
 
-  for (let i = 0; i < targets.length; i++) {
-    const pos = targets[i];
+  for (const pos of allCandidates) {
+    if (successCount >= CONFIG.topN) break;
+    tryCount++;
+
     logger.info(
-      `[${i + 1}/${targets.length}] [${pos._poolName}] 복사 시작 → ${pos.positionAddress}`,
+      `[시도 ${tryCount}] [${pos._poolName}] 복사 → ${pos.positionAddress} (성공 ${successCount}/${CONFIG.topN})`,
     );
     try {
       const result = runCliText(
         `positions copy --position ${pos.positionAddress} --amount-usd ${CONFIG.copyAmountUsd} ${flag}`,
       );
-      // NFT 주소만 추출해서 로그
       const nft =
         result.match(/NFT Address\s+([1-9A-HJ-NP-Za-km-z]{32,44})/)?.[1] ?? "";
-      logger.ok(`[${pos._poolName}] 복사 완료! NFT: ${nft}`);
+      logger.ok(`[${pos._poolName}] 복사 성공! NFT: ${nft}`);
+      successCount++;
     } catch (e) {
-      logger.error(`[${pos._poolName}] 복사 실패: ${e.message.split("\n")[0]}`);
+      const reason = e.message.includes("insufficient")
+        ? "잔액 부족 → 다음 후보로"
+        : e.message.split("\n")[0];
+      logger.warn(`[${pos._poolName}] 실패 (${reason})`);
     }
+  }
+
+  if (successCount < CONFIG.topN) {
+    logger.warn(
+      `목표 ${CONFIG.topN}개 중 ${successCount}개만 성공 (후보 ${allCandidates.length}개 모두 시도)`,
+    );
+  } else {
+    logger.ok(`목표 달성! ${successCount}개 복사 완료 (${tryCount}번 시도)`);
   }
 
   // 6. 내 포지션 요약
