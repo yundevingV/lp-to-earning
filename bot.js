@@ -171,24 +171,19 @@ function calcApr(pos) {
 }
 
 // ── 복합 점수 계산 (저수익 고안정성 전략) ─────────────────────────────────────────
-// 기하평균: APR^0.35 × ln(TVL)^0.40 × FeeRate^0.25 × PnL패널티
+// 기하평균: APR^0.35 × ln(TVL)^0.40 × FeeRate^0.25
 // - TVL에 ln() 적용: $1K→$50K 차이는 크게, $50K→$51K 차이는 작게
 // - 기하평균: 3개 지표 중 하나라도 나쁘면 전체 점수 급락 (균형 강제)
-// - PnL 패널티: 손실(IL) 중인 포지션은 감점
 function calcScore(pos) {
   const apr = Math.max(calcApr(pos), 0.001);
   const tvl = Math.max(parseFloat(pos.liquidityUsd || 0), 1);
   const fee = parseFloat(pos.earnedUsd || 0);
   const feeRate = Math.max((fee / tvl) * 100, 0.001); // 수수료 효율 (%)
-  const pnlPct = parseFloat(pos.pnlUsdPercent || 0);
 
   const raw =
     Math.pow(apr, 0.35) *
     Math.pow(Math.log(tvl + 1), 0.4) *
     Math.pow(feeRate, 0.25);
-
-  // PnL 패널티: 손실 중이면 (1 + pnlPct)를 곱해 감점
-  const pnlPenalty = pnlPct < 0 ? Math.max(1 + pnlPct, 0.1) : 1;
 
   // Range Safety 패널티 (가장자리에 너무 가까우면 감점)
   let safetyPenalty = 1;
@@ -207,7 +202,7 @@ function calcScore(pos) {
     }
   }
 
-  return raw * pnlPenalty * safetyPenalty;
+  return raw * safetyPenalty;
 }
 
 // ── 소트 키 함수 ───────────────────────────────────────────────────────────────
