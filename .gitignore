@@ -1,4 +1,5 @@
 .agents
+.vscode
 
 legacy/
 logs/
