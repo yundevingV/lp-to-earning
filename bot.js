@@ -244,7 +244,14 @@ async function askOllamaAdvisor(topCandidates) {
       .replace(/```/g, "")
       .trim();
 
-    return JSON.parse(text);
+    let picks = JSON.parse(text);
+
+    // AI가 ID 앞에 "ID: " 와 같은 접두사를 붙였을 경우를 대비해 정제
+    if (Array.isArray(picks)) {
+      picks = picks.map((id) => id.replace(/^ID:\s*/i, "").trim());
+    }
+
+    return picks;
   } catch (error) {
     logger.warn(
       `❌ Ollama 연동 실패: ${error.message} (기본 로직으로 대체합니다)`,
