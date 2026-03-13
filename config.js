@@ -41,6 +41,19 @@ const CONFIG = {
   rebalanceThreshold: 0.5, // 50% 이상 수익률 개선될 때만 리밸런싱 (가스비 방어 최적화)
   rebalanceMinAgeHours: 48, // 최소 유지 시간 (수수료를 회수하기 위해 최소 이틀은 유지)
 
+  // ── 자동 스왑/충전 (Slippage 방어) ──────────────────────────────────────────
+  autoRecharge: {
+    enabled: true,
+    thresholdUsd: 2, // 토큰 잔고가 $2 미만이면 충전 시도
+    rechargeAmountUsd: 6, // $6어치 USDC를 해당 토큰으로 스왑
+    tokens: [
+      // 충전 대상 토큰 (xStock)
+      { name: "TSLAx", mint: "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB" },
+      { name: "NVDAx", mint: "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh" },
+      { name: "QQQx", mint: "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ" },
+    ],
+  },
+
   logDir: path.join(__dirname, "logs"),
   dbFile: path.join(__dirname, "logs", "positions_db.json"),
 };

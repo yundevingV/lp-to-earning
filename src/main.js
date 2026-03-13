@@ -14,6 +14,7 @@ const {
 const { askOllamaAdvisor } = require("./services/ai");
 const { cleanOutOfRange, rebalance } = require("./services/rebalance");
 const { monitor } = require("./services/monitor");
+const { rechargeTokens } = require("./services/swap");
 
 // ── 메인 실행 ─────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,10 @@ const { monitor } = require("./services/monitor");
 async function run() {
   const now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
   logger.info(`========== 봇 실행 시작 [${now}] ==========`);
+
+  // 0. 토큰 자동 충전 (Slippage 방어용 충전식 스왑)
+  await rechargeTokens();
+
   logger.info(
     `설정 | topN=${CONFIG.topN} | sortBy=${CONFIG.sortBy} | minAPR=${CONFIG.minAprPercent}% | amount=$${CONFIG.copyAmountUsd} | dryRun=${CONFIG.dryRun}`,
   );

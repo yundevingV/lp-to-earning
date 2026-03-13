@@ -18,7 +18,10 @@
   ├─ 4. 자동 복사 (Auto-Copy)
   │      └─ $5 씩 목표 개수(Top N)만큼 포지션 복사
   │
-  └─ 5. 리밸런싱 및 사후 관리
+  ├─ 5. 자동 충전 및 스왑 (Auto-Recharge)
+  │      └─ Slippage 최소화를 위해 토큰 잔고가 부족할 때만 $10 단위로 충전 (USDC → xStock)
+  │
+  └─ 6. 리밸런싱 및 사후 관리
          ├─ 범위를 벗어난(Out-of-Range) 노후 포지션 자동 클로즈
          └─ 동일 페어 내 더 높은 수익률의 포지션 발견 시 리밸런싱 (가스비 방어 최적화)
 ```
@@ -80,6 +83,8 @@ lp-to-earning/
  │   │   ├─ dex.js       # byreal-cli 통신 및 온체인 데이터 조회
  │   │   ├─ ai.js        # Ollama 연동 및 프롬프트 파싱
  │   │   ├─ position.js  # Score 계산 로직
+ │   │   ├─ swap.js      # 부족한 토큰 자동 충전 (Swap)
+ │   │   ├─ monitor.js   # 풀 및 내 자산 상태 모니터링
  │   │   └─ rebalance.js # 범위 이탈 클로즈 및 자동 리밸런싱
           ...
  │   └─ utils/           # 유틸리티 로직
