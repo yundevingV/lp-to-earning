@@ -1,0 +1,9 @@
+{
+  "name": "lp-to-earning",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node src/main.js",
+    "start:dry-run": "node src/main.js --dry-run",
+    "report": "node generate-report.js"
+  }
+}

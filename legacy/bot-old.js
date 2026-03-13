@@ -174,36 +174,49 @@ function calcApr(pos) {
 // 기하평균: APR^0.35 × ln(TVL)^0.40 × FeeRate^0.25
 // - TVL에 ln() 적용: $1K→$50K 차이는 크게, $50K→$51K 차이는 작게
 // - 기하평균: 3개 지표 중 하나라도 나쁘면 전체 점수 급락 (균형 강제)
+// ── 심플해진 1차 필터 점수 계산 (TVL × APR) ─────────────────────────
 function calcScore(pos) {
-  const apr = Math.max(calcApr(pos), 0.001);
-  const tvl = Math.max(parseFloat(pos.liquidityUsd || 0), 1);
-  const fee = parseFloat(pos.earnedUsd || 0);
-  const feeRate = Math.max((fee / tvl) * 100, 0.001); // 수수료 효율 (%)
+  const tvl = Math.max(parseFloat(pos.liquidityUsd || 0), 0);
+  const apr = Math.max(calcApr(pos), 0);
 
-  const raw =
-    Math.pow(apr, 0.35) *
-    Math.pow(Math.log(tvl + 1), 0.4) *
-    Math.pow(feeRate, 0.25);
+  // 너무 규모가 작은 거미줄 포지션(TVL 10달러 미만)은 노이즈이므로 제외
+  if (tvl < 10) return 0;
 
-  // Range Safety 패널티 (가장자리에 너무 가까우면 감점)
-  let safetyPenalty = 1;
-  if (pos._currentPrice && pos.priceLower && pos.priceUpper) {
-    const price = pos._currentPrice;
-    const lower = parseFloat(pos.priceLower);
-    const upper = parseFloat(pos.priceUpper);
-    const span = upper - lower;
-    if (span > 0) {
-      // 현재 가격이 하단/상단 중 어디에 더 가까운지 (절대값 거리)
-      const distToEdge = Math.min(price - lower, upper - price);
-      const safetyPct = distToEdge / span; // 최대 0.5 (정중앙)
-
-      // 범위의 10% 이내(가장자리)로 접근했다면 점수를 깎음 (최대 10분의 1 토막)
-      safetyPenalty = Math.min(Math.max(safetyPct / 0.1, 0.1), 1);
-    }
-  }
-
-  return raw * safetyPenalty;
+  // TVL과 APR을 곱해서 "실제 발생 수익 규모력이 큰" 순서대로 점수화
+  return tvl * apr;
 }
+// ──────────────────────────────────────────────────────────────
+
+// function calcScore(pos) {
+//   const apr = Math.max(calcApr(pos), 0.001);
+//   const tvl = Math.max(parseFloat(pos.liquidityUsd || 0), 1);
+//   const fee = parseFloat(pos.earnedUsd || 0);
+//   const feeRate = Math.max((fee / tvl) * 100, 0.001); // 수수료 효율 (%)
+
+//   const raw =
+//     Math.pow(apr, 0.35) *
+//     Math.pow(Math.log(tvl + 1), 0.4) *
+//     Math.pow(feeRate, 0.25);
+
+//   // Range Safety 패널티 (가장자리에 너무 가까우면 감점)
+//   let safetyPenalty = 1;
+//   if (pos._currentPrice && pos.priceLower && pos.priceUpper) {
+//     const price = pos._currentPrice;
+//     const lower = parseFloat(pos.priceLower);
+//     const upper = parseFloat(pos.priceUpper);
+//     const span = upper - lower;
+//     if (span > 0) {
+//       // 현재 가격이 하단/상단 중 어디에 더 가까운지 (절대값 거리)
+//       const distToEdge = Math.min(price - lower, upper - price);
+//       const safetyPct = distToEdge / span; // 최대 0.5 (정중앙)
+
+//       // 범위의 10% 이내(가장자리)로 접근했다면 점수를 깎음 (최대 10분의 1 토막)
+//       safetyPenalty = Math.min(Math.max(safetyPct / 0.1, 0.1), 1);
+//     }
+//   }
+
+//   return raw * safetyPenalty;
+// }
 
 // ── 소트 키 함수 ───────────────────────────────────────────────────────────────
 const SORT_FN = {
@@ -215,14 +228,14 @@ const SORT_FN = {
 // ── 보조 퀀트 어드바이저 (Ollama 로컬 AI) 연동 ────────────────────────────────
 async function askOllamaAdvisor(topCandidates) {
   let report =
-    '너는 보조 퀀트 어드바이저야. 내가 1차로 필터링한 상위 후보지들이야.\n여기서 가장 안전하고 수익률이 좋은 최대 3개의 ID를 골라서 JSON 배열 형식으로만 응답해.\n예시: ["ID1", "ID2", "ID3"]\n(설명이나 마크다운 없이 오직 JSON 배열만 출력할 것)\n\n--- 보고서 시작 ---\n';
+    '너는 보조 퀀트 어드바이저야. 내가 1차로 필터링한 상위 후보지들이야.\n여기서 가장 안전하고 수익률이 좋은 최대 3개의 포지션 주소(positionAddress)를 골라서 JSON 배열 형식으로만 응답해.\n예시: ["Abcd123...", "Xxyz987...", "Qwrt555..."]\n(주의: 절대로 1,2,3 같은 순번 숫자나 임의의 ID를 만들지 말고, 내가 제공한 44자리 포지션 주소 전체를 그대로 배열에 담을 것! 설명이나 마크다운 없이 오직 JSON 배열만 출력해)\n\n--- 보고서 시작 ---\n';
 
   topCandidates.forEach((p, i) => {
     const score = calcScore(p).toFixed(2);
     const tvl = parseFloat(p.liquidityUsd || 0).toFixed(0);
     const apr = p._apr.toFixed(2);
     const risk = p.inRange ? "Low (안전)" : "High (위험)";
-    report += `- ID: ${p.positionAddress} | 풀: ${p._poolName} | APR: ${apr}% | TVL: $${tvl} | Range Risk: ${risk} | 1차점수: ${score}\n`;
+    report += `- 포지션주소: ${p.positionAddress} | 풀: ${p._poolName} | APR: ${apr}% | TVL: $${tvl} | Range Risk: ${risk} | 1차점수: ${score}\n`;
   });
   report += "--- 보고서 끝 ---\n";
 

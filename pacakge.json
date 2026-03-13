@@ -1,6 +1,0 @@
-{
-  "scripts": {
-    "start": "node bot.js",
-    "report": "node generate-report.js"
-  }
-}
