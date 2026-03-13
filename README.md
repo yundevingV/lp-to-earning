@@ -49,12 +49,15 @@ ollama run gemma3:4b
 npm install
 
 # 테스트 모드 (실제 돈이 복사되지 않음)
-npm start -- --dry-run
+npm run start --dry-run
 # 또는
 node src/main.js --dry-run
 
 # 실제 실행 (가스비와 USDC가 소모됨)
-npm start
+npm run start
+
+# 보고서 작성 스크립트 실행 (for free!)
+npm run script
 ```
 
 ## 🔧 설정 (Config)
@@ -78,9 +81,11 @@ lp-to-earning/
  │   │   ├─ ai.js        # Ollama 연동 및 프롬프트 파싱
  │   │   ├─ position.js  # Score 계산 로직
  │   │   └─ rebalance.js # 범위 이탈 클로즈 및 자동 리밸런싱
+          ...
  │   └─ utils/           # 유틸리티 로직
  │       ├─ logger.js    # 콘솔 및 파일 로그 시스템
  │       └─ db.js        # 로컬 포지션 상태 저장 (positions_db.json)
+          ...
  │
  ├─ logs/                # 📝 실행 로그 및 DB 폴더
  └─ legacy/              # 📦 레거시 모음 (과거 봇 스크립트 등 보관용)
