@@ -35,14 +35,14 @@ const CONFIG = {
   minAprPercent: 20, // 최소 연환산 APR (%) — 너무 낮은 포지션 제외
 
   // ── 복사 설정 ──────────────────────────────────────────────────────────────
-  copyAmountUsd: 5, // 포지션당 복사 금액 ($) - 가스비(~$0.3) 대비 수익을 위해 $50 이상 권장
+  copyAmountUsd: 5, // 포지션당 복사 금액 ($) - 가스비(~$0.3) 대비 수익을 위해 $5 이상 권장
   dryRun:
     process.argv.includes("--dry-run") ||
     process.env.DRY_RUN === "true" ||
     false,
 
   // ── 스케줄 ─────────────────────────────────────────────────────────────────
-  runOnStart: false, // 봇을 켜자마자 즉시 1회 복사를 수행할지 여부 (false면 1시간 뒤부터 수행)
+  runOnStart: true, // 봇 시작 시 즉시 1회 실행 여부 (false면 1시간 뒤 첫 실행)
   intervalMs: 60 * 60 * 1000, // 복사 주기: 1시간
   monitorIntervalMs: 10 * 60 * 1000, // 모니터링 주기: 10분
 
@@ -212,6 +212,46 @@ const SORT_FN = {
   fee: (a, b) => parseFloat(b.earnedUsd) - parseFloat(a.earnedUsd),
   apr: (a, b) => calcApr(b) - calcApr(a),
 };
+// ── 보조 퀀트 어드바이저 (Ollama 로컬 AI) 연동 ────────────────────────────────
+async function askOllamaAdvisor(topCandidates) {
+  let report =
+    '너는 보조 퀀트 어드바이저야. 내가 1차로 필터링한 상위 후보지들이야.\n여기서 가장 안전하고 수익률이 좋은 최대 3개의 ID를 골라서 JSON 배열 형식으로만 응답해.\n예시: ["ID1", "ID2", "ID3"]\n(설명이나 마크다운 없이 오직 JSON 배열만 출력할 것)\n\n--- 보고서 시작 ---\n';
+
+  topCandidates.forEach((p, i) => {
+    const score = calcScore(p).toFixed(2);
+    const tvl = parseFloat(p.liquidityUsd || 0).toFixed(0);
+    const apr = p._apr.toFixed(2);
+    const risk = p.inRange ? "Low (안전)" : "High (위험)";
+    report += `- ID: ${p.positionAddress} | 풀: ${p._poolName} | APR: ${apr}% | TVL: $${tvl} | Range Risk: ${risk} | 1차점수: ${score}\n`;
+  });
+  report += "--- 보고서 끝 ---\n";
+
+  try {
+    const response = await fetch("http://localhost:11434/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gemma3:4b",
+        prompt: report,
+        stream: false,
+      }),
+    });
+
+    const data = await response.json();
+    let text = data.response;
+    text = text
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    return JSON.parse(text);
+  } catch (error) {
+    logger.warn(
+      `❌ Ollama 연동 실패: ${error.message} (기본 로직으로 대체합니다)`,
+    );
+    return null;
+  }
+}
 // ──────────────────────────────────────────────────────────────────────────────
 
 // ── 메인 실행 ─────────────────────────────────────────────────────────────────
@@ -289,10 +329,10 @@ async function run() {
   const sortFn = SORT_FN[CONFIG.sortBy] ?? SORT_FN.score;
   allCandidates.sort(sortFn);
 
-  // 4. 전체 순위 상위 20개 출력 (복사 전 미리보기)
+  // 4. 전체 순위 상위 20개 출력 (1차 필터링 미리보기)
   const preview = allCandidates.slice(0, 20);
   logger.info(
-    `\n── 전체 순위 (${CONFIG.sortBy} 기준, 목표 ${CONFIG.topN}개 성공까지 순서대로 시도) ──`,
+    `\n── 전체 순위 (${CONFIG.sortBy} 기준, 1차 필터링 전체 후보) ──`,
   );
   preview.forEach((p, i) => {
     const tvl = parseFloat(p.liquidityUsd).toFixed(0);
@@ -306,12 +346,39 @@ async function run() {
   });
   logger.info("");
 
-  // 5. 폴백 복사: 1위부터 순서대로 시도, 성공 N개 달성 시 중단
+  // 5. AI 보조 어드바이저에게 2차 평가 요청
+  let finalCandidates = [];
+  const top10 = allCandidates.slice(0, 10);
+  logger.info(
+    `\n🤖 Ollama (gemma3:4b) 에게 상위 10개 후보에 대한 더블체크를 요청합니다...`,
+  );
+
+  const aiPicks = await askOllamaAdvisor(top10);
+  if (aiPicks && Array.isArray(aiPicks) && aiPicks.length > 0) {
+    logger.ok(`💡 AI 추천 완료! 추천된 ID: ${aiPicks.join(", ")}`);
+
+    aiPicks.forEach((id) => {
+      const found = allCandidates.find((p) => p.positionAddress === id);
+      if (found) finalCandidates.push(found);
+    });
+
+    // AI 추천 외 남은 후보들도 뒤쪽에 정렬 순서대로 배치 (폴백용)
+    allCandidates.forEach((p) => {
+      if (!finalCandidates.includes(p)) finalCandidates.push(p);
+    });
+  } else {
+    logger.warn(
+      `⚠️ AI 추천을 받지 못했습니다. 기존 점수 기준(Score)으로 진행합니다.`,
+    );
+    finalCandidates = allCandidates;
+  }
+
+  // 6. 폴백 복사: 1위부터 순서대로 시도, 성공 N개 달성 시 중단
   const flag = CONFIG.dryRun ? "--dry-run" : "--confirm";
   let successCount = 0;
   let tryCount = 0;
 
-  for (const pos of allCandidates) {
+  for (const pos of finalCandidates) {
     if (successCount >= CONFIG.topN) break;
     tryCount++;
 
