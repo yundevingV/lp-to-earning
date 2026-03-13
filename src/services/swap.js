@@ -55,10 +55,24 @@ async function rechargeTokens() {
 
         // 4. 스왑 실행 (USDC -> Target Token)
         // dryRun 설정에 따라 --dry-run 또는 --confirm 결정
-        const dryRunFlag = CONFIG.dryRun ? "--dry-run" : "--confirm";
+        // ── 🛡️ 최초 10분 안전 잠금 (Safety Lock) ─────────────────────────────
+        const uptimeMs = process.uptime() * 1000;
+        const isSafetyLocked = uptimeMs < (CONFIG.safetyDelayMs || 600000);
+
+        let dryRunFlag = CONFIG.dryRun ? "--dry-run" : "--confirm";
+        if (isSafetyLocked && !CONFIG.dryRun) {
+          const waitMin = Math.ceil(
+            ((CONFIG.safetyDelayMs || 600000) - uptimeMs) / 60000,
+          );
+          logger.warn(
+            `│ [Safety] 봇 시작 후 ${waitMin}분간은 실제 클레이가 아닌 시뮬레이션으로만 동작합니다.`,
+          );
+          dryRunFlag = "--dry-run";
+        }
+
         const cmd = `swap execute --input-mint ${USDC_MINT} --output-mint ${target.mint} --amount ${rechargeAmount} ${dryRunFlag}`;
 
-        if (CONFIG.dryRun) {
+        if (CONFIG.dryRun || (isSafetyLocked && !CONFIG.dryRun)) {
           logger.info(`│ [Dry Run] 스왑 시뮬레이션: ${cmd}`);
           try {
             const result = runCliJson(cmd);

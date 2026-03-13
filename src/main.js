@@ -149,6 +149,19 @@ async function run() {
     logger.info(
       `[시도 ${tryCount}] [${pos._poolName}] 복사 → ${pos.positionAddress} (성공 ${successCount}/${CONFIG.topN})`,
     );
+
+    // 안전 지연 (Safety Delay) 체크
+    const uptimeMs = process.uptime() * 1000;
+    const isSafetyLocked = uptimeMs < CONFIG.safetyDelayMs;
+
+    if (!CONFIG.dryRun && isSafetyLocked) {
+      const waitMin = Math.ceil((CONFIG.safetyDelayMs - uptimeMs) / 60000);
+      logger.warn(
+        `[Safety] 봇 시작 후 ${waitMin}분간은 실제 복사(트랜잭션)가 금지됩니다. (실수 방지용)`,
+      );
+      continue;
+    }
+
     try {
       const result = runCliText(
         `positions copy --position ${pos.positionAddress} --amount-usd ${CONFIG.copyAmountUsd} ${flag}`,
