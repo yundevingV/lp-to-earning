@@ -3,7 +3,9 @@
 
 const CONFIG = require("../config");
 const logger = require("./utils/logger");
-const { loadDb, registerNewPosition } = require("./utils/db");
+const {
+  registerNewPosition,
+} = require("./utils/db");
 const { runCliJson, runCliText, getMyPositions } = require("./services/dex");
 const {
   formatAge,
@@ -27,7 +29,7 @@ async function run() {
   await rechargeTokens();
 
   logger.info(
-    `설정 | topN=${CONFIG.topN} | sortBy=${CONFIG.sortBy} | minAPR=${CONFIG.minAprPercent}% | amount=$${CONFIG.copyAmountUsd} | dryRun=${CONFIG.dryRun}`,
+    `설정 | topN=${CONFIG.topN} | sortBy=${CONFIG.sortBy} | minPositionAPR=${CONFIG.minAprPercent}% | amount=$${CONFIG.copyAmountUsd} | dryRun=${CONFIG.dryRun}`,
   );
 
   let walletAddr;
@@ -67,7 +69,7 @@ async function run() {
       });
 
       logger.info(
-        `[${pool.name}] 조건 충족 포지션: ${filtered.length}개 (전체 ${positions.length}개 중)`,
+        `[${pool.name}] 조건 충족 포지션(포지션APR>=${CONFIG.minAprPercent}%): ${filtered.length}개 (전체 ${positions.length}개 중)`,
       );
 
       filtered.forEach((p) => {
@@ -139,10 +141,12 @@ async function run() {
   }
 
   const flag = CONFIG.dryRun ? "--dry-run" : "--confirm";
+  const maxAttempts = Number(CONFIG.maxCopyAttempts || 10);
+  const attemptCandidates = finalCandidates.slice(0, maxAttempts);
   let successCount = 0;
   let tryCount = 0;
 
-  for (const pos of finalCandidates) {
+  for (const pos of attemptCandidates) {
     if (successCount >= CONFIG.topN) break;
     tryCount++;
 
@@ -181,7 +185,7 @@ async function run() {
 
   if (successCount < CONFIG.topN) {
     logger.warn(
-      `목표 ${CONFIG.topN}개 중 ${successCount}개만 성공 (후보 ${allCandidates.length}개 모두 시도)`,
+      `목표 ${CONFIG.topN}개 중 ${successCount}개만 성공 (최대 ${maxAttempts}개 후보 시도)`,
     );
   } else {
     logger.ok(`목표 달성! ${successCount}개 복사 완료 (${tryCount}번 시도)`);

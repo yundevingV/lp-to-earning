@@ -18,9 +18,10 @@ const CONFIG = {
 
   // ── 복사 기준 ──────────────────────────────────────────────────────────────
   topN: 3, // 성공 복사 목표 개수
+  maxCopyAttempts: 10, // 실행당 최대 복사 시도 횟수 (후보 무한 시도 방지)
   sortBy: "score", // 'score' | 'tvl' | 'fee' | 'apr'  (정렬 기준)
   requireInRange: true, // true = In-Range 포지션만
-  minAprPercent: 20, // 최소 연환산 APR (%) — 너무 낮은 포지션 제외
+  minAprPercent: 20, // 최소 포지션 연환산 APR(%) — calcApr 기준으로 필터
 
   // ── 복사 설정 ──────────────────────────────────────────────────────────────
   copyAmountUsd: 5, // 포지션당 복사 금액 ($) - 가스비(~$0.3) 대비 수익을 위해 $5 이상 권장
@@ -36,7 +37,7 @@ const CONFIG = {
 
   // ── 자동 교체 ──────────────────────────────────────────────────────────────
   autoCloseOutOfRange: true, // Out-of-Range 포지션 자동 클로즈
-  closeOnHighRisk: true, // 범위 이탈 위험이 'high'로 뜨는 아슬아슬한 포지션도 함께 클로즈할지 여부
+  closeOnHighRisk: false, // 범위 이탈 위험이 'high'로 뜨는 아슬아슬한 포지션도 함께 클로즈할지 여부
   rebalanceEnabled: true, // 동일 페어 더 좋은 포지션 발견 시 자동 복사
   rebalanceThreshold: 0.5, // 50% 이상 수익률 개선될 때만 리밸런싱 (가스비 방어 최적화)
   rebalanceMinAgeHours: 48, // 최소 유지 시간 (수수료를 회수하기 위해 최소 이틀은 유지)
@@ -47,8 +48,8 @@ const CONFIG = {
   // ── 자동 스왑/충전 (Slippage 방어) ──────────────────────────────────────────
   autoRecharge: {
     enabled: true,
-    thresholdUsd: 2, // 토큰 잔고가 $2 미만이면 충전 시도
-    rechargeAmountUsd: 6, // $6어치 USDC를 해당 토큰으로 스왑
+    thresholdUsd: 2, // 토큰 잔고가 $1 미만이면 충전 시도
+    rechargeAmountUsd: 5, // $5어치 USDC를 해당 토큰으로 스왑
     tokens: [
       // 충전 대상 토큰 (xStock)
       { name: "TSLAx", mint: "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB" },

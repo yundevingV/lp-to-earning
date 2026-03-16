@@ -4,6 +4,22 @@ const { loadDb, registerNewPosition } = require("../utils/db");
 const { runCliJson, runCliText } = require("./dex");
 const { calcScore } = require("./position");
 
+/**
+ * @typedef {import("../types/position").PositionAnalyzeResponse} PositionAnalyzeResponse
+ */
+
+/**
+ * positions analyze JSON 응답에서 포지션 판단값만 안전하게 추출합니다.
+ * @param {PositionAnalyzeResponse} info
+ */
+function getAnalyzeState(info) {
+  const inRange = info?.data?.position?.inRange;
+  const outOfRangeRisk = info?.data?.rangeHealth?.outOfRangeRisk;
+  const isOut = inRange === false;
+  const isHighRisk = outOfRangeRisk === "high";
+  return { inRange, isOut, isHighRisk };
+}
+
 // ── Out-of-Range 자동 클로즈 ─────────────────────────────────────────────────
 async function cleanOutOfRange(myList) {
   let outOfRange = [];
@@ -24,14 +40,14 @@ async function cleanOutOfRange(myList) {
       outOfRange.push(p);
     } else if (p.inRange === undefined) {
       try {
+        /** @type {PositionAnalyzeResponse} */
         const info = runCliJson(`positions analyze ${nftMint}`);
-        const isOut = info?.data?.position?.inRange === false;
-        const isHighRisk = info?.data?.rangeHealth?.outOfRangeRisk === "high";
+        const { inRange, isOut, isHighRisk } = getAnalyzeState(info);
 
         if (isOut || (CONFIG.closeOnHighRisk && isHighRisk)) {
           outOfRange.push(p);
           p.inRange = false;
-        } else if (info?.data?.position?.inRange === true) {
+        } else if (inRange === true) {
           p.inRange = true;
         }
       } catch (e) {}
