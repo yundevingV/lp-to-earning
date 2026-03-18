@@ -121,6 +121,42 @@ async function rechargeTokens() {
   logger.info("└──────────────────────────────────");
 }
 
+/**
+ * 특정 풀에 매칭되는 토큰을 즉시 강제 충전합니다 (Retry용)
+ * @param {string} poolName 
+ */
+async function forceRechargeByPool(poolName) {
+  if (!CONFIG.autoRecharge || !CONFIG.autoRecharge.enabled) return false;
+
+  const target = CONFIG.autoRecharge.tokens.find((t) =>
+    poolName.includes(t.name),
+  );
+  if (!target) {
+    logger.warn(`│ [Recharge] 해당 풀(${poolName})에 매칭되는 자동 충전 설정을 찾을 수 없습니다.`);
+    return false;
+  }
+
+  logger.warn(`│ [Recharge] ⚠️ 긴급 스왑 충전 시작: [${target.name}]`);
+  const rechargeAmount = CONFIG.autoRecharge.rechargeAmountUsd || 5;
+  const flag = CONFIG.dryRun ? "--dry-run" : "--confirm";
+  const cmd = `swap execute --input-mint ${USDC_MINT} --output-mint ${target.mint} --amount ${rechargeAmount} ${flag}`;
+
+  try {
+    const result = runCliJson(cmd);
+    if (result.success) {
+      logger.ok(`│ [Recharge] ✅ ${target.name} 긴급 충전 완료!`);
+      return true;
+    } else {
+      logger.error(`│ [Recharge] ❌ 충전 실패: ${JSON.stringify(result.error || result)}`);
+      return false;
+    }
+  } catch (err) {
+    logger.error(`│ [Recharge] ❌ 스왑 시도 중 에러: ${err.message}`);
+    return false;
+  }
+}
+
 module.exports = {
   rechargeTokens,
+  forceRechargeByPool,
 };

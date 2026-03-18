@@ -16,7 +16,7 @@ const {
 const { askOllamaAdvisor } = require("./services/ai");
 const { cleanOutOfRange, rebalance } = require("./services/rebalance");
 const { monitor } = require("./services/monitor");
-const { rechargeTokens } = require("./services/swap");
+const { rechargeTokens, forceRechargeByPool } = require("./services/swap");
 
 // ── 메인 실행 ─────────────────────────────────────────────────────────────────
 
@@ -176,8 +176,29 @@ async function run() {
       if (nft && !CONFIG.dryRun) registerNewPosition(nft);
       successCount++;
     } catch (e) {
+      if (e.message.includes("insufficient") || e.message.includes("balance")) {
+        logger.warn(`[${pos._poolName}] ⚠️ 잔액 부족 감지! 긴급 자동 충전을 시도합니다...`);
+        const charged = await forceRechargeByPool(pos._poolName);
+        if (charged) {
+          logger.info(`[${pos._poolName}] 다시 복사(Retry)를 시도합니다...`);
+          try {
+            const retryResult = runCliText(
+              `positions copy --position ${pos.positionAddress} --amount-usd ${CONFIG.copyAmountUsd} ${flag}`,
+            );
+            const nft =
+              retryResult.match(/NFT Address\s+([1-9A-HJ-NP-Za-km-z]{32,44})/)?.[1] ?? "";
+            logger.ok(`[${pos._poolName}] (재시도) 복사 성공! NFT: ${nft}`);
+            if (nft && !CONFIG.dryRun) registerNewPosition(nft);
+            successCount++;
+            continue; // 실행 성공 시 반복문 진행
+          } catch (retryErr) {
+            logger.error(`[${pos._poolName}] 프리뷰/재시도 실패: ${retryErr.message.split("\n")[0]}`);
+          }
+        }
+      }
+
       const reason = e.message.includes("insufficient")
-        ? "잔액 부족 → 다음 후보로"
+        ? "잔액 부족 → 스킵"
         : e.message.split("\n")[0];
       logger.warn(`[${pos._poolName}] 실패 (${reason})`);
     }
