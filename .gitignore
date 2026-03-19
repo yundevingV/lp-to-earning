@@ -7,3 +7,8 @@ logs/
 .DS_Store
 
 .env
+
+*.pem
+
+connect.bat
+deploy.sh
