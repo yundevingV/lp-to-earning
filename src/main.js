@@ -16,7 +16,7 @@ const {
 const { askOllamaAdvisor } = require("./services/ai");
 const { cleanOutOfRange, rebalance } = require("./services/rebalance");
 const { monitor } = require("./services/monitor");
-const { rechargeTokens, forceRechargeByPool } = require("./services/swap");
+const { rechargeTokens, forceRechargeByPool, rechargeSolana } = require("./services/swap");
 
 // ── 메인 실행 ─────────────────────────────────────────────────────────────────
 
@@ -25,8 +25,8 @@ async function run() {
   const now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
   logger.info(`========== 봇 실행 시작 [${now}] ==========`);
 
-  // 0. 토큰 자동 충전 (Slippage 방어용 충전식 스왑)
-  await rechargeTokens();
+  // 0. 토큰 자동 충전 (Slippage 방어용 충전식 스왑) 대신 SOL 가스비 방어
+  await rechargeSolana();
 
   logger.info(
     `설정 | topN=${CONFIG.topN} | sortBy=${CONFIG.sortBy} | minPositionAPR=${CONFIG.minAprPercent}% | amount=$${CONFIG.copyAmountUsd} | dryRun=${CONFIG.dryRun}`,
@@ -55,10 +55,10 @@ async function run() {
         const poolInfo = runCliJson(`pools info ${pool.address}`);
         currentPrice = parseFloat(
           poolInfo?.data?.pool?.current_price ||
-            poolInfo?.data?.current_price ||
-            0,
+          poolInfo?.data?.current_price ||
+          0,
         );
-      } catch (e) {}
+      } catch (e) { }
 
       const data = runCliJson(`positions top-positions --pool ${pool.address}`);
       const positions = data?.data?.positions ?? [];
@@ -225,7 +225,7 @@ async function run() {
         `  • ${p.pair ?? p.poolAddress} | ${status} | Liq=$${liq} | Earned=$${earned} | ${p.nftMintAddress} | ${p.positionAddress}`,
       );
     });
-  } catch (_) {}
+  } catch (_) { }
 
   if (CONFIG.autoCloseOutOfRange) {
     await cleanOutOfRange(myList);

@@ -3,6 +3,7 @@ const logger = require("../utils/logger");
 const { runCliJson } = require("./dex");
 
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 /**
  * 지갑 잔고를 확인하고, 부족한 xStock 토큰을 USDC로 충전(Swap)합니다.
@@ -156,7 +157,73 @@ async function forceRechargeByPool(poolName) {
   }
 }
 
+/**
+ * SOL 잔고가 0.03 이하일 때 0.03 SOL 만큼 충전합니다.
+ */
+async function rechargeSolana() {
+  logger.info("── 🔄 SOL 자동 충전 체크 (Recharge) ──");
+  try {
+    const balanceData = runCliJson("wallet balance");
+    const balance = balanceData?.data?.balance;
+    const solAmount = balance?.sol?.amount_sol || 0;
+
+    logger.info(`│ [SOL] 현재 잔고: ${solAmount.toFixed(4)} SOL`);
+
+    if (solAmount <= 0.03) {
+      logger.warn(`│ ⚠️ [SOL] 잔고 부족 (${solAmount.toFixed(4)} <= 0.03) -> 0.03 SOL 충전 시도`);
+
+      const tokenListFull = runCliJson("tokens list");
+      const tokenMap = {};
+      (tokenListFull?.data?.tokens || []).forEach((t) => {
+        tokenMap[t.mint] = t;
+      });
+
+      // SOL(WSOL) 가격 조회, 없으면 대략 200불 가정
+      const solPrice = parseFloat(tokenMap[SOL_MINT]?.price_usd || 200);
+      const rechargeUsdc = Math.ceil(0.03 * solPrice); // 약 0.03개 만큼의 USDC 계산
+
+      const uptimeMs = process.uptime() * 1000;
+      const isSafetyLocked = uptimeMs < (CONFIG.safetyDelayMs || 600000);
+      let dryRunFlag = CONFIG.dryRun ? "--dry-run" : "--confirm";
+
+      if (isSafetyLocked && !CONFIG.dryRun) {
+        logger.warn(`│ [Safety] 봇 시작 후 대기 시간 중이므로 시뮬레이션으로만 동작합니다.`);
+        dryRunFlag = "--dry-run";
+      }
+
+      const cmd = `swap execute --input-mint ${USDC_MINT} --output-mint ${SOL_MINT} --amount ${rechargeUsdc} ${dryRunFlag}`;
+
+      try {
+        if (CONFIG.dryRun || (isSafetyLocked && !CONFIG.dryRun)) {
+          logger.info(`│ [Dry Run] 시뮬레이션: ${cmd}`);
+          const result = runCliJson(cmd);
+          if (result.success) {
+             logger.info(`│ ✅ [SOL] 시뮬레이션 결과: USDC $${rechargeUsdc} => 약 ${result.data?.uiOutAmount} SOL`);
+          }
+        } else {
+          logger.info(`│ [Action] 실제 스왑 실행: USDC $${rechargeUsdc} -> SOL (목표 0.03 SOL)`);
+          const result = runCliJson(cmd);
+  
+          if (result.success) {
+            logger.info(`│ ✅ [SOL] 충전 성공! (TX: ${result.data?.signature || "N/A"})`);
+          } else {
+            logger.error(`│ ❌ [SOL] 충전 실패: ${JSON.stringify(result.error || result)}`);
+          }
+        }
+      } catch (err) {
+        logger.error(`│ ❌ [SOL] 스왑 시도 중 에러: ${err.message}`);
+      }
+    } else {
+      logger.info(`│ ✅ [SOL] 잔고 충분 (${solAmount.toFixed(4)} > 0.03) -> 충전 패스`);
+    }
+  } catch (e) {
+    logger.error(`│ ❌ SOL 토큰 충전 프로세스 중 에러: ${e.message}`);
+  }
+  logger.info("└──────────────────────────────────");
+}
+
 module.exports = {
   rechargeTokens,
   forceRechargeByPool,
+  rechargeSolana,
 };
