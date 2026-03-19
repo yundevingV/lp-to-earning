@@ -47,7 +47,7 @@ const CONFIG = {
   autoCloseOutOfRange: true, // Out-of-Range 포지션 자동 클로즈
   closeOnHighRisk: false, // 범위 이탈 위험이 'high'로 뜨는 아슬아슬한 포지션도 함께 클로즈할지 여부
   rebalanceEnabled: true, // 동일 페어 더 좋은 포지션 발견 시 자동 복사
-  rebalanceThreshold: 0.5, // 50% 이상 수익률 개선될 때만 리밸런싱 (가스비 방어 최적화)
+  rebalanceThreshold: 0.3, // 30% 이상 수익률 개선될 때만 리밸런싱 (가스비 방어 최적화)
   rebalanceMinAgeHours: 6, // 최소 유지 시간 (6시간 이후 Out-of-Range 시 즉시 정리)
 
   // ── 안전 설정 (Safety) ──────────────────────────────────────────────────────

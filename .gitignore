@@ -5,3 +5,5 @@ legacy/
 logs/
 
 .DS_Store
+
+.env

@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  lp-to-earning:
+    build: .
+    container_name: lp-to-earning
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs

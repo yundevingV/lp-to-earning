@@ -15,7 +15,8 @@ async function askOllamaAdvisor(topCandidates) {
   report += "--- 보고서 끝 ---\n";
 
   try {
-    const response = await fetch("http://localhost:11434/api/generate", {
+    const ollamaHost = process.env.OLLAMA_HOST || "http://localhost:11434";
+    const response = await fetch(`${ollamaHost}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

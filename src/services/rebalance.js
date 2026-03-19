@@ -2,7 +2,7 @@ const CONFIG = require("../../config");
 const logger = require("../utils/logger");
 const { loadDb, registerNewPosition } = require("../utils/db");
 const { runCliJson, runCliText } = require("./dex");
-const { calcScore } = require("./position");
+const { calcScore, calcApr } = require("./position");
 
 /**
  * @typedef {import("../types/position").PositionAnalyzeResponse} PositionAnalyzeResponse
@@ -91,9 +91,7 @@ function rebalance(myList, allCandidates) {
     .forEach((p) => {
       const pair = p.pair || p.poolAddress;
       if (!myByPair[pair]) myByPair[pair] = [];
-      p._yieldRate =
-        parseFloat(p.earnedUsd || 0) /
-        Math.max(parseFloat(p.liquidityUsd || 1), 1);
+      p._apr = calcApr(p);
 
       const mint = p.nftMintAddress ?? p.positionAddress;
       const createdAt = db[mint];
@@ -121,7 +119,7 @@ function rebalance(myList, allCandidates) {
     const bestScore = calcScore(best);
 
     const myBest = myByPair[pair].sort(
-      (a, b) => b._yieldRate - a._yieldRate,
+      (a, b) => b._apr - a._apr,
     )[0];
 
     if (myBest._ageHours < CONFIG.rebalanceMinAgeHours) {
@@ -131,14 +129,13 @@ function rebalance(myList, allCandidates) {
       continue;
     }
 
-    const bestCandidateYield = parseFloat(best.earnedUsdPercent || 0) / 100;
+    const bestApr = calcApr(best);
     const threshold = CONFIG.rebalanceThreshold;
 
-    if (bestScore <= 0 || bestCandidateYield <= 0) continue;
+    if (bestScore <= 0 || bestApr <= 0) continue;
 
-    const myYield = myBest._yieldRate;
-    const improvement =
-      myYield > 0 ? (bestCandidateYield - myYield) / myYield : 1;
+    const myApr = myBest._apr;
+    const improvement = myApr > 0 ? (bestApr - myApr) / myApr : 1;
 
     if (improvement < threshold) {
       logger.info(
@@ -159,7 +156,18 @@ function rebalance(myList, allCandidates) {
       const nft =
         result.match(/NFT Address\s+([1-9A-HJ-NP-Za-km-z]{32,44})/)?.[1] ?? "";
       logger.ok(`  [리밸런스] [${pair}] 복사 성공! NFT: ${nft}`);
-      if (nft && !CONFIG.dryRun) registerNewPosition(nft);
+      if (nft && !CONFIG.dryRun) {
+        registerNewPosition(nft);
+        const oldNft = myBest.nftMintAddress ?? myBest.positionAddress;
+        logger.warn(`  [리밸런스] ❌ 교체 완료! 기존 저효율 포지션 정리를 시도합니다. (${oldNft})`);
+        try {
+          const closeResult = runCliText(`positions close --nft-mint ${oldNft} ${flag}`);
+          const sig = closeResult.match(/Signature\s+([1-9A-HJ-NP-Za-km-z]{32,88})/)?.[1] ?? "";
+          logger.ok(`  [리밸런스] 기존 포지션 클로즈 성공! Sig: ${sig}`);
+        } catch (closeErr) {
+          logger.error(`  [리밸런스] 기존 포지션 클로즈 실패: ${closeErr.message.split("\n")[0]}`);
+        }
+      }
       triggered++;
     } catch (e) {
       logger.error(`  [리밸런스] [${pair}] 실패: ${e.message.split("\n")[0]}`);

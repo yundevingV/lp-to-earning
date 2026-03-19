@@ -1,0 +1,13 @@
+node_modules/
+logs/
+.git/
+.DS_Store
+.env
+*.log
+docker-compose.yml
+Dockerfile
+Dockerfile.*
+.vscode/
+.agents/
+.report/
+legacy/
