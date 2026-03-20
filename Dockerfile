@@ -21,8 +21,8 @@ RUN npm install --production
 # 5. 소스 코드 복사
 COPY . .
 
-# 6. 진입 스크립트 실행 권한
-RUN chmod +x ./entrypoint.sh
+# 6. 진입 스크립트의 윈도우 줄바꿈(\r) 제거 및 실행 권한 부여
+RUN sed -i 's/\r$//' ./entrypoint.sh && chmod +x ./entrypoint.sh
 
 # 7. 진입점 설정 및 실행
 ENTRYPOINT ["/app/entrypoint.sh"]

@@ -5,6 +5,6 @@
     "start": "node src/main.js",
     "start:dry-run": "node src/main.js --dry-run",
     "report": "node generate-report.js",
-    "docker:deploy:amd64": "docker buildx build --platform linux/amd64 -t ghcr.io/yundevingv/lp-to-earning:latest --push ."
+    "docker-deploy": "docker buildx build --platform linux/amd64 -t ghcr.io/yundevingv/lp-to-earning:latest --push ."
   }
 }
